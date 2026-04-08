@@ -31,12 +31,14 @@ apiKey: <apiKey>
 
 When the user gives you `projectId`, `playbookId`, and `apiKey`, execute the playbook in this order:
 
-1. Resolve the playbook first with a single API call.
-2. Do not print status updates, implementation notes, or commentary before reading the resolved playbook inputs.
-3. Read the playbook `description`, `globalInstructions`, and `inputs`.
-4. Ask for inputs one by one, waiting for the user after each required input.
-5. Run steps in order, resolving placeholders from the collected inputs and previous step outputs.
-6. Store each step output so later steps can reference it.
+1. Show a short resolve status such as `Connecting [#####..........]` while the resolve call is in flight.
+2. Resolve the playbook first with a single API call.
+3. If the resolve call returns no playbook data, say so plainly and stop instead of pretending the playbook exists.
+4. Read the playbook `description`, `globalInstructions`, and `inputs`.
+5. Ask for inputs one by one, waiting for the user after each required input.
+6. Prefix each input question with its position, such as `1/3`, `2/3`, `3/3`, based on the total number of required inputs.
+7. Run steps in order, resolving placeholders from the collected inputs and previous step outputs.
+8. Store each step output so later steps can reference it.
 
 Use the helper script in this skill:
 
@@ -62,9 +64,10 @@ curl -X POST https://app.runrail.io/api/runrail/playbooks/resolve \
 ## Input Handling
 
 - Read `description` and `globalInstructions` before asking the first question.
-- Do not narrate what you are doing before reading the resolved inputs and asking for them.
+- Keep pre-input narration minimal. The only status text before the first question should be the short `Connecting ...` message while resolving.
 - If there are no inputs, state that clearly and continue.
 - Ask for one input at a time.
+- When there are multiple required inputs, label each question as `current/total`.
 - Use the input type and example when they exist.
 - Do not batch all input questions into one message unless the user explicitly asks for that.
 - If a required input is missing, do not start the steps.
@@ -72,6 +75,8 @@ curl -X POST https://app.runrail.io/api/runrail/playbooks/resolve \
 ## Step Execution
 
 - Run steps strictly in order.
+- Before executing each step, announce its position and title, for example `1. Research companies`, `2. Score accounts`, `3. Draft outreach`.
+- Use the step title as published in the playbook. If a step has no usable title, fall back to a stable identifier such as the step id.
 - If a step prompt is empty, stop and explain that the playbook is not executable as published.
 - Preserve the raw output of each step.
 - If a step has `outputKey`, store the output under that key.
@@ -90,6 +95,7 @@ Resolve placeholders before running each step:
 - Do not invent hidden inputs, rules, or steps that are not in the playbook.
 - Keep step outputs stable and reusable by later steps.
 - If the playbook has no usable steps, say so plainly instead of pretending it ran.
+- If the resolve call returns an empty result, print a clear "not found" message instead of leaving the user with a blank response.
 
 ## Playbook Design
 
