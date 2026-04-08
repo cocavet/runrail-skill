@@ -31,11 +31,12 @@ apiKey: <apiKey>
 
 When the user gives you `projectId`, `playbookId`, and `apiKey`, execute the playbook in this order:
 
-1. Resolve the playbook first.
-2. Read the playbook `description` and `globalInstructions` before asking for inputs or running steps.
-3. Ask for inputs one by one, waiting for the user after each required input.
-4. Run steps in order, resolving placeholders from the collected inputs and previous step outputs.
-5. Store each step output so later steps can reference it.
+1. Resolve the playbook first with a single API call.
+2. Do not print status updates, implementation notes, or commentary before reading the resolved playbook inputs.
+3. Read the playbook `description`, `globalInstructions`, and `inputs`.
+4. Ask for inputs one by one, waiting for the user after each required input.
+5. Run steps in order, resolving placeholders from the collected inputs and previous step outputs.
+6. Store each step output so later steps can reference it.
 
 Use the helper script in this skill:
 
@@ -46,10 +47,10 @@ python3 scripts/resolve_playbook.py \
   --api-key "<apiKey>"
 ```
 
-The script tries the public resolve endpoint first:
+Use only this request:
 
 ```bash
-curl -X POST https://app.runrail.io/runrail/playbooks/resolve \
+curl -X POST https://app.runrail.io/api/runrail/playbooks/resolve \
   -H "Authorization: Bearer <apiKey>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -58,11 +59,10 @@ curl -X POST https://app.runrail.io/runrail/playbooks/resolve \
   }'
 ```
 
-If that endpoint is unavailable or returns unusable data, the script falls back to the same internal queries the frontend uses so you can still inspect the playbook and its steps.
-
 ## Input Handling
 
 - Read `description` and `globalInstructions` before asking the first question.
+- Do not narrate what you are doing before reading the resolved inputs and asking for them.
 - If there are no inputs, state that clearly and continue.
 - Ask for one input at a time.
 - Use the input type and example when they exist.
