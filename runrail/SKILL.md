@@ -81,7 +81,7 @@ If that endpoint is unavailable or returns unusable data, the script falls back 
 Resolve placeholders before running each step:
 
 - `{{input.foo}}` and `{{inputs.foo}}` come from user-provided inputs.
-- `{{step.foo}}`, `{{steps.foo}}`, and `{{outputs.foo}}` come from previous step outputs.
+- `{{output.foo}}` and `{{outputs.foo}}` come from previous step outputs.
 - Ignore harmless whitespace inside the braces.
 - If a referenced variable is missing, stop and say exactly which variable could not be resolved.
 
