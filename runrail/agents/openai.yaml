@@ -1,0 +1,4 @@
+interface:
+  display_name: "RunRail"
+  short_description: "Work with RunRail playbooks and workflows"
+  default_prompt: "Help with RunRail playbooks, prompts, runs, and workflow design."
