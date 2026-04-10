@@ -14,11 +14,9 @@ POLL_INTERVAL_SECONDS = 0.12
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Resolve a RunRail playbook with a single API call."
+        description="Resolve a RunRail playbook with a single execution token."
     )
-    parser.add_argument("--project-id", required=True)
-    parser.add_argument("--playbook-id", required=True)
-    parser.add_argument("--api-key", required=True)
+    parser.add_argument("--execution-token", required=True)
     return parser.parse_args()
 
 
@@ -40,7 +38,7 @@ def clear_status_line(width):
 
 
 def missing_playbook_message(payload):
-    default_message = "No playbook data found for the provided projectId and playbookId."
+    default_message = "No playbook data found for the provided execution token."
 
     if payload in (None, {}, []):
         return default_message
@@ -66,18 +64,13 @@ def main():
         "30",
         "-X",
         "POST",
-        f"{APP_BASE}/api/runrail/playbooks/resolve",
+        f"{APP_BASE}/api/runrail/agent/resolve",
         "-H",
-        f"Authorization: Bearer {args.api_key}",
+        f"Authorization: Bearer {args.execution_token}",
         "-H",
         "Content-Type: application/json",
         "-d",
-        json.dumps(
-            {
-                "projectId": args.project_id,
-                "playbookId": args.playbook_id,
-            }
-        ),
+        json.dumps({}),
     ]
 
     process = subprocess.Popen(
@@ -108,7 +101,7 @@ def main():
 
     stripped_stdout = stdout.strip()
     if not stripped_stdout:
-        sys.stderr.write("No playbook data found for the provided projectId and playbookId.\n")
+        sys.stderr.write("No playbook data found for the provided execution token.\n")
         return 1
 
     try:

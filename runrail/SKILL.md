@@ -15,9 +15,7 @@ When the user pastes the Runrail agent payload copied from the product, treat it
 
 ```text
 Execute this Runrail playbook with the Runrail skill:
-projectId: <projectId>
-playbookId: <playbookId>
-apiKey: <apiKey>
+executionToken: <executionToken>
 ```
 
 ## Core Rule
@@ -34,7 +32,7 @@ Execution mode is strict.
 
 ## Mode Selection
 
-- If the user provides `projectId`, `playbookId`, and `apiKey`, enter execution mode and prioritize the API payload over general workflow advice.
+- If the user provides `executionToken`, enter execution mode and prioritize the API payload over general workflow advice.
 - If the user asks to create, edit, review, or improve a playbook, enter design mode.
 - Do not mix execution mode and design mode in the same response unless the user explicitly asks for both.
 
@@ -51,17 +49,41 @@ Use this section only when creating or editing a playbook, not when executing a 
 
 ## Execution Protocol
 
-When the user gives you `projectId`, `playbookId`, and `apiKey`, execute the playbook in this order:
+When the user gives you `executionToken`, execute the playbook in this exact order and do not deviate from the route:
 
 1. Show a short resolve status such as `Connecting [#####..........]` while the resolve call is in flight.
-2. Resolve the playbook first with a single API call.
+2. Resolve the playbook first with a single API call using the execution token.
 3. If the resolve call returns no playbook data, say so plainly and stop instead of pretending the playbook exists.
 4. Read the playbook `description`, `globalInstructions`, `inputs`, `steps`, and `stepRecords`.
-5. Ask for inputs one by one, waiting for the user after each required input.
-6. Prefix each input question with its position, such as `1/3`, `2/3`, `3/3`, based on the total number of required inputs.
-7. Build the execution route from `stepRecords` and follow those records one by one in published order.
-8. Store each step output so later steps can reference it.
-9. Do not add commentary that changes the route of execution unless the user explicitly asks for analysis.
+5. Build the execution route from `stepRecords` and follow those records one by one in published order.
+6. Ask for inputs one by one, waiting for the user after each required input.
+7. Prefix each input question with its position, such as `1/3`, `2/3`, `3/3`, based on the total number of required inputs.
+8. Create the run with a dedicated API call after all required inputs have been collected and before executing the first step.
+9. Save the returned `runId` and reuse that exact `runId` for all later reporting calls.
+10. Do not start the first step until the run has been created and all required inputs have been collected.
+11. Before each step starts, report that step as `running`.
+12. Execute exactly one published step at a time.
+13. After each step finishes, report that exact step result before moving to the next step.
+14. If a step is blocked, report `waiting` or `needs_review` and stop instead of guessing.
+15. If a step fails, report the failure on that same run and stop.
+16. Only after the last published step is complete, report the run as `completed` with the final output.
+17. Do not add commentary that changes the route of execution unless the user explicitly asks for analysis.
+18. Do not call the internal one-shot execution endpoint while in strict agent execution mode.
+
+## API Route Contract
+
+In strict agent execution mode, use these endpoints and no alternative execution path:
+
+1. Resolve the playbook:
+   `POST /runrail/agent/resolve`
+2. Create the run and get its id:
+   `POST /runrail/agent/start`
+3. Report progress for that exact run:
+   `POST /runrail/agent/runs/<runId>/report`
+4. Read the run state if reconciliation is needed:
+   `GET /runrail/agent/runs/<runId>`
+
+Do not use `POST /runrail/playbooks/<playbookId>/run` in strict agent execution mode, because that endpoint is the internal one-shot execution path.
 
 ## Resolved Payload Contract
 
@@ -78,21 +100,16 @@ Use the helper script in this skill:
 
 ```bash
 python3 scripts/resolve_playbook.py \
-  --project-id "<projectId>" \
-  --playbook-id "<playbookId>" \
-  --api-key "<apiKey>"
+  --execution-token "<executionToken>"
 ```
 
 Use only this request:
 
 ```bash
-curl -X POST https://app.runrail.io/api/runrail/playbooks/resolve \
-  -H "Authorization: Bearer <apiKey>" \
+curl -X POST https://app.runrail.io/api/runrail/agent/resolve \
+  -H "Authorization: Bearer <executionToken>" \
   -H "Content-Type: application/json" \
-  -d '{
-    "projectId": "<projectId>",
-    "playbookId": "<playbookId>"
-  }'
+  -d '{}'
 ```
 
 ## Input Handling
