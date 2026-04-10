@@ -13,6 +13,18 @@ When the playbook comes from the RunRail API, treat the resolved payload as the 
 
 When the user pastes the Runrail agent payload copied from the product, treat it as an execution request, not just a design request.
 
+Preferred payload format:
+
+```json
+{
+  "kind": "runrail-agent-execution",
+  "version": "1",
+  "executionToken": "<executionToken>"
+}
+```
+
+Legacy fallback format:
+
 ```text
 executionToken: <executionToken>
 ```
@@ -32,6 +44,7 @@ Execution mode is strict.
 ## Mode Selection
 
 - If the user provides `executionToken`, enter execution mode and prioritize the API payload over general workflow advice.
+- If the user provides a JSON payload with `kind: "runrail-agent-execution"`, parse `executionToken` from that JSON field exactly. Do not retype, shorten, normalize, or infer the token from surrounding prose.
 - If the user asks to create, edit, review, or improve a playbook, enter design mode.
 - Do not mix execution mode and design mode in the same response unless the user explicitly asks for both.
 
