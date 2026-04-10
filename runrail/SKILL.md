@@ -14,7 +14,6 @@ When the playbook comes from the RunRail API, treat the resolved payload as the 
 When the user pastes the Runrail agent payload copied from the product, treat it as an execution request, not just a design request.
 
 ```text
-Execute this Runrail playbook with the Runrail skill:
 executionToken: <executionToken>
 ```
 
@@ -54,8 +53,8 @@ When the user gives you `executionToken`, execute the playbook in this exact ord
 1. Show a short resolve status such as `Connecting [#####..........]` while the resolve call is in flight.
 2. Resolve the playbook first with a single API call using the execution token.
 3. If the resolve call returns no playbook data, say so plainly and stop instead of pretending the playbook exists.
-4. Read the playbook `description`, `globalInstructions`, `inputs`, `steps`, and `stepRecords`.
-5. Build the execution route from `stepRecords` and follow those records one by one in published order.
+4. Read the playbook `description`, `globalInstructions`, `inputs`, `steps`, `stepRecords`, and `executionProtocol`.
+5. Treat `executionProtocol` as the authoritative runtime contract and follow it literally.
 6. Ask for inputs one by one, waiting for the user after each required input.
 7. Prefix each input question with its position, such as `1/3`, `2/3`, `3/3`, based on the total number of required inputs.
 8. Create the run with a dedicated API call after all required inputs have been collected and before executing the first step.
@@ -64,11 +63,15 @@ When the user gives you `executionToken`, execute the playbook in this exact ord
 11. Before each step starts, report that step as `running`.
 12. Execute exactly one published step at a time.
 13. After each step finishes, report that exact step result before moving to the next step.
-14. If a step is blocked, report `waiting` or `needs_review` and stop instead of guessing.
-15. If a step fails, report the failure on that same run and stop.
-16. Only after the last published step is complete, report the run as `completed` with the final output.
-17. Do not add commentary that changes the route of execution unless the user explicitly asks for analysis.
-18. Do not call the internal one-shot execution endpoint while in strict agent execution mode.
+14. Send exactly one step update per report request.
+15. Use only the status transitions allowed by `executionProtocol` and the API. In the current strict mode that means `pending -> running -> completed|failed`.
+16. Do not report `waiting` or `needs_review` in strict agent execution mode unless the API explicitly allows those transitions.
+17. If a step fails, report the failure on that same run and stop.
+18. Only after the last published step is complete, report the run as `completed` or `failed` in a separate final run-status request.
+19. After the final run-status request, call `GET /runrail/agent/runs/<runId>` and verify the persisted state before claiming success.
+20. If the verification response does not match the reports you believe you sent, do not claim completion. Continue reconciling or state the mismatch clearly.
+21. Do not add commentary that changes the route of execution unless the user explicitly asks for analysis.
+22. Do not call the internal one-shot execution endpoint while in strict agent execution mode.
 
 ## API Route Contract
 
@@ -91,6 +94,7 @@ When the resolve API returns a payload like this, interpret it literally:
 
 - `inputs` is the authoritative input list. Each entry may arrive as a compact tuple like `[name, type, example]`.
 - `stepRecords` contains the executable step definitions.
+- `executionProtocol` is the authoritative route contract for runtime execution and reporting.
 - Each `stepRecords` item carries the fields that matter for execution, including `idPost`, `name`, `prompt`, `outputKey`, and `exposeAsOutput`.
 - `steps` may appear as a lightweight list of step ids. Use it only to confirm the same route published in `stepRecords`, not to invent a second execution model.
 - If `steps` references an id that is missing from `stepRecords`, stop and report that exact missing step id.
@@ -142,6 +146,10 @@ curl -X POST https://app.runrail.io/api/runrail/agent/resolve \
 - Do not silently recover by guessing what a broken step "probably meant".
 - If the API defines a step but the data needed to run it is missing, stop at that step and report the exact blocker.
 - Do not skip a `stepRecords` entry, even if it looks trivial.
+- Do not send more than one step update in a single report request.
+- Do not report a later step before the API confirms the earlier step transition.
+- Do not claim that a report succeeded unless the API response succeeded.
+- After the final report, verify the stored run state before claiming completion.
 
 Resolve placeholders before running each step:
 

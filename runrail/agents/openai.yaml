@@ -1,4 +1,4 @@
 interface:
   display_name: "RunRail"
   short_description: "Execute and refine RunRail playbooks with strict API fidelity"
-  default_prompt: "Help resolve, inspect, and execute RunRail playbooks by following the exact API-defined inputs and stepRecords one by one, preserving the published prompts, order, and output routing without improvising, skipping, or reordering."
+  default_prompt: "Help resolve, inspect, and execute RunRail playbooks by following the exact API-defined inputs, stepRecords, and executionProtocol one by one, preserving the published prompts, order, output routing, and report verification flow without improvising, skipping, or reordering."
