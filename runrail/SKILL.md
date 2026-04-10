@@ -64,14 +64,16 @@ When the user gives you `executionToken`, execute the playbook in this exact ord
 12. Execute exactly one published step at a time.
 13. After each step finishes, report that exact step result before moving to the next step.
 14. Send exactly one step update per report request.
-15. Use only the status transitions allowed by `executionProtocol` and the API. In the current strict mode that means `pending -> running -> completed|failed`.
-16. Do not report `waiting` or `needs_review` in strict agent execution mode unless the API explicitly allows those transitions.
-17. If a step fails, report the failure on that same run and stop.
-18. Only after the last published step is complete, report the run as `completed` or `failed` in a separate final run-status request.
-19. After the final run-status request, call `GET /runrail/agent/runs/<runId>` and verify the persisted state before claiming success.
-20. If the verification response does not match the reports you believe you sent, do not claim completion. Continue reconciling or state the mismatch clearly.
-21. Do not add commentary that changes the route of execution unless the user explicitly asks for analysis.
-22. Do not call the internal one-shot execution endpoint while in strict agent execution mode.
+15. Every step report must include `step.id`, `step.index`, or `step.title`. Prefer `step.id`.
+16. Do not send run-level `status: "running"` in `/report`. Use `step.status` instead.
+17. Use only the status transitions allowed by `executionProtocol` and the API. In the current strict mode that means `pending -> running -> completed|failed`.
+18. Do not report `waiting` or `needs_review` in strict agent execution mode unless the API explicitly allows those transitions.
+19. If a step fails, report the failure on that same run and stop.
+20. Only after the last published step is complete, report the run as `completed` or `failed` in a separate final run-status request.
+21. After the final run-status request, call `GET /runrail/agent/runs/<runId>` and verify the persisted state before claiming success.
+22. If the verification response does not match the reports you believe you sent, do not claim completion. Continue reconciling or state the mismatch clearly.
+23. Do not add commentary that changes the route of execution unless the user explicitly asks for analysis.
+24. Do not call the internal one-shot execution endpoint while in strict agent execution mode.
 
 ## API Route Contract
 
@@ -87,6 +89,24 @@ In strict agent execution mode, use these endpoints and no alternative execution
    `GET /runrail/agent/runs/<runId>`
 
 Do not use `POST /runrail/playbooks/<playbookId>/run` in strict agent execution mode, because that endpoint is the internal one-shot execution path.
+
+Use these minimum valid report payloads:
+
+```json
+{"step":{"id":"<stepId>","status":"running"}}
+```
+
+```json
+{"step":{"id":"<stepId>","status":"completed","output":"<step output>"}}
+```
+
+```json
+{"step":{"id":"<stepId>","status":"failed","error":{"message":"<error message>"}}}
+```
+
+```json
+{"status":"completed"}
+```
 
 ## Resolved Payload Contract
 
@@ -147,6 +167,7 @@ curl -X POST https://app.runrail.io/api/runrail/agent/resolve \
 - If the API defines a step but the data needed to run it is missing, stop at that step and report the exact blocker.
 - Do not skip a `stepRecords` entry, even if it looks trivial.
 - Do not send more than one step update in a single report request.
+- Do not omit the step identifier in a report. Prefer `step.id` over `step.title`.
 - Do not report a later step before the API confirms the earlier step transition.
 - Do not claim that a report succeeded unless the API response succeeded.
 - After the final report, verify the stored run state before claiming completion.
