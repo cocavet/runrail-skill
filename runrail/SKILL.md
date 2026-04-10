@@ -73,18 +73,18 @@ When the user gives you `executionToken`, execute the playbook in this exact ord
 8. Create the run with a dedicated API call after all required inputs have been collected and before executing the first step.
 9. Save the returned `runId` and reuse that exact `runId` for all later reporting calls.
 10. Do not start the first step until the run has been created and all required inputs have been collected.
-11. Before each step starts, report that step as `running`.
+11. Preserve the `running` transition for each step. If you batch reports, include the `running` update before that step's terminal update in the same ordered batch.
 12. Execute exactly one published step at a time.
-13. After each step finishes, report that exact step result before moving to the next step.
-14. Send exactly one step update per report request.
+13. After each step finishes, preserve that exact step result before moving to the next step. You may batch consecutive step updates into one request as long as they stay in order.
+14. A report request may contain one or more ordered step updates.
 15. Every step report must include `step.id`, `step.index`, or `step.title`. Prefer `step.id`.
 16. Do not send run-level `status: "running"` in `/report`. Use `step.status` instead.
 17. Do not report `step.status` as `pending`. `pending` is the initial server-owned state and is not a valid agent report.
 18. Use only the status transitions allowed by `executionProtocol` and the API. In the current strict mode that means `pending -> running -> completed|failed`.
 19. Do not report `waiting` or `needs_review` in strict agent execution mode unless the API explicitly allows those transitions.
 20. If a step fails, report the failure on that same run and stop.
-21. Only after the last published step is complete, report the run as `completed` or `failed` in a separate final run-status request.
-22. After the final run-status request, call `GET /runrail/agent/runs/<runId>` and verify the persisted state before claiming success.
+21. Only after the last published step is complete, report the run as `completed` or `failed`. You may send that final run status in the same request that completes the last remaining step, or in a separate final run-status request.
+22. After the final run-status request or combined final batch, call `GET /runrail/agent/runs/<runId>` and verify the persisted state before claiming success.
 23. If the verification response does not match the reports you believe you sent, do not claim completion. Continue reconciling or state the mismatch clearly.
 24. Do not add commentary that changes the route of execution unless the user explicitly asks for analysis.
 25. Do not call the internal one-shot execution endpoint while in strict agent execution mode.
@@ -116,6 +116,14 @@ Use these minimum valid report payloads:
 
 ```json
 {"step":{"id":"<stepId>","status":"failed","error":{"message":"<error message>"}}}
+```
+
+```json
+{"steps":[{"id":"<step1Id>","status":"running"},{"id":"<step1Id>","status":"completed","output":"<step 1 output>"},{"id":"<step2Id>","status":"running"},{"id":"<step2Id>","status":"completed","output":"<step 2 output>"}]}
+```
+
+```json
+{"steps":[{"id":"<lastStepId>","status":"running"},{"id":"<lastStepId>","status":"completed","output":"<last step output>"}],"status":"completed"}
 ```
 
 ```json
@@ -180,9 +188,9 @@ curl -X POST https://app.runrail.io/api/runrail/agent/resolve \
 - Do not silently recover by guessing what a broken step "probably meant".
 - If the API defines a step but the data needed to run it is missing, stop at that step and report the exact blocker.
 - Do not skip a `stepRecords` entry, even if it looks trivial.
-- Do not send more than one step update in a single report request.
+- You may send more than one step update in a single report request only when the updates stay strictly ordered and preserve every allowed transition.
 - Do not omit the step identifier in a report. Prefer `step.id` over `step.title`.
-- Do not report a later step before the API confirms the earlier step transition.
+- Do not report a later step before the payload reflects the earlier transition in the same ordered batch or a previous successful API response.
 - Do not claim that a report succeeded unless the API response succeeded.
 - After the final report, verify the stored run state before claiming completion.
 

@@ -35,10 +35,11 @@ Restart Codex after updating so the new version is loaded.
 The exported skill now makes the strict `/report` contract explicit for agents:
 
 - Reuse the exact `runId` returned by `POST /runrail/agent/start`.
-- Send exactly one step update per `POST /runrail/agent/runs/<runId>/report`.
+- You may send one or more ordered step updates per `POST /runrail/agent/runs/<runId>/report`.
 - Include `step.id`, `step.index`, or `step.title` in every step report. Prefer `step.id`.
 - Do not send run-level `status: "running"` in `/report`.
-- Send the final run status in a separate request only after all steps are reported.
+- Preserve every allowed transition in order when batching, including `running` before `completed` or `failed`.
+- You may send the final run status in the same request that completes the last step, or in a separate final request after that.
 
 ## Repo Layout
 
