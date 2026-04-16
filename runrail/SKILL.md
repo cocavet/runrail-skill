@@ -111,6 +111,8 @@ When the user gives you `executionToken`, execute the playbook in this exact ord
 24. If the verification response does not match the reports you believe you sent, do not claim completion. Continue reconciling or state the mismatch clearly.
 25. Do not add commentary that changes the route of execution unless the user explicitly asks for analysis.
 26. Do not call the internal one-shot execution endpoint while in strict agent execution mode.
+27. For timeline fidelity, include the exact step input context in report updates whenever you have it. Prefer `step.resolvedPrompt` and you may also include `step.inputPreview` or `step.input`.
+28. If you resolved the step prompt locally before calling the model, report that exact rendered prompt back to `/report` instead of relying on the server to reconstruct it later.
 
 ## API Route Contract
 
@@ -160,6 +162,22 @@ Use these minimum valid report payloads:
 ```json
 {"status":"completed"}
 ```
+
+Recommended higher-fidelity step report payloads:
+
+```json
+{"step":{"id":"<stepId>","status":"running","resolvedPrompt":"<exact rendered prompt sent to the model>","inputPreview":"<short preview of the step input context>"}}
+```
+
+```json
+{"step":{"id":"<stepId>","status":"completed","resolvedPrompt":"<exact rendered prompt sent to the model>","inputPreview":"<short preview of the step input context>","output":"<step output>"}}
+```
+
+```json
+{"step":{"id":"<stepId>","status":"failed","resolvedPrompt":"<exact rendered prompt sent to the model>","inputPreview":"<short preview of the step input context>","error":{"message":"<error message>"}}}
+```
+
+These extra fields are recommended for observability and UI accuracy, not a license to change the route or mutate the published prompt.
 
 ## Resolved Payload Contract
 

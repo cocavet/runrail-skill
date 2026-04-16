@@ -42,6 +42,7 @@ The exported skill now makes the strict `/report` contract explicit for agents:
 - Include `step.id`, `step.index`, or `step.title` in every step report. Prefer `step.id`.
 - Do not send run-level `status: "running"` in `/report`.
 - Preserve every allowed transition in order when batching, including `running` before `completed` or `failed`.
+- Prefer reporting the exact rendered step input back to `/report` with `resolvedPrompt`, and optionally `inputPreview` or `input`, so the execution timeline shows the real input context.
 - You may send the final run status in the same request that completes the last step, or in a separate final request after that.
 
 ## Repo Layout
