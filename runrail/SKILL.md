@@ -13,13 +13,23 @@ Use this skill for RunRail playbooks and agent executions.
 - Otherwise, use design mode for creating, editing, reviewing, or improving a playbook.
 - Do not mix execution and design unless the user explicitly asks for both.
 
+## User-Facing Communication
+
+- Start the task promptly instead of listing internal steps or a detailed plan.
+- Keep user-facing updates short and milestone-based.
+- Only notify meaningful progress such as: starting, waiting for required input, blocked, or completed.
+- Do not narrate intermediate steps, internal checks, route selection, variable resolution, or step-by-step execution.
+- If a status message is useful while resolving, keep it to a short `Connecting ...` style update.
+- Keep the final response concise and focused on outcome, blockers, or next action.
+
 ## Strict Execution
 
 - Treat the resolved API payload as the source of truth.
 - Follow the published route, prompts, inputs, step order, and output exposure exactly.
 - Do not invent steps, merge steps, skip steps, reorder execution, rewrite runtime inputs, or change the route.
 - If required data is missing, inconsistent, or unresolved, stop and state the exact blocker.
-- Keep narration minimal; before input questions, only show a short `Connecting ...` status while resolving.
+- Begin execution as soon as the run is resolved and required inputs are known.
+- Do not announce each published step to the user; only surface milestone updates or blockers.
 
 When running in strict execution mode, read [references/execution-contract.md](references/execution-contract.md) before proceeding.
 
@@ -36,6 +46,7 @@ python3 scripts/resolve_playbook.py --execution-token "<executionToken>"
 - Make inputs, variables, and outputs explicit.
 - Use structured outputs when later steps depend on them.
 - Preserve business intent while improving reliability.
+- Do the design work directly instead of narrating intermediate reasoning unless the user explicitly asks for it.
 
 ## Prompt Writing
 

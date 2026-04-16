@@ -1,4 +1,4 @@
 interface:
   display_name: "RunRail"
   short_description: "Execute and refine RunRail playbooks with strict API fidelity"
-  default_prompt: "Help create, review, and execute RunRail playbooks. In strict execution mode, resolve first, follow the published steps and inputs exactly, reuse the returned runId for reports, and verify persisted state before claiming completion."
+  default_prompt: "Help create, review, and execute RunRail playbooks. Start work promptly, keep user-facing updates brief and milestone-based, and do not narrate intermediate steps. In strict execution mode, resolve first, follow the published steps and inputs exactly, reuse the returned runId for reports, and verify persisted state before claiming completion."
