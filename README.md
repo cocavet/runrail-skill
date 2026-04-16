@@ -34,6 +34,9 @@ Restart Codex after updating so the new version is loaded.
 
 The exported skill now makes the strict `/report` contract explicit for agents:
 
+- Treat the copied execution payload as the runtime source of truth, including `inputs` and `transport`.
+- Call `POST /runrail/agent/resolve` first.
+- Reuse the provided start `inputs` unchanged when calling `POST /runrail/agent/start`.
 - Reuse the exact `runId` returned by `POST /runrail/agent/start`.
 - You may send one or more ordered step updates per `POST /runrail/agent/runs/<runId>/report`.
 - Include `step.id`, `step.index`, or `step.title` in every step report. Prefer `step.id`.

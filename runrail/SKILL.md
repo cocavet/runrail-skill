@@ -19,7 +19,26 @@ Preferred payload format:
 {
   "kind": "runrail-agent-execution",
   "version": "1",
-  "executionToken": "<executionToken>"
+  "executionToken": "<executionToken>",
+  "inputs": {
+    "<inputName>": "<inputValue>"
+  },
+  "transport": {
+    "resolve": {
+      "method": "POST",
+      "path": "/runrail/agent/resolve",
+      "body": {}
+    },
+    "start": {
+      "method": "POST",
+      "path": "/runrail/agent/start",
+      "body": {
+        "inputs": {
+          "<inputName>": "<inputValue>"
+        }
+      }
+    }
+  }
 }
 ```
 
@@ -34,7 +53,8 @@ executionToken: <executionToken>
 Execution mode is strict.
 
 - The API-defined playbook is authoritative.
-- The published input list is authoritative.
+- The published input list is authoritative for validation and variable resolution.
+- The payload `inputs` object is authoritative for runtime values when it is present.
 - The published `stepRecords` sequence is authoritative.
 - The published step prompt is authoritative.
 - The published output exposure rules are authoritative.
@@ -45,6 +65,8 @@ Execution mode is strict.
 
 - If the user provides `executionToken`, enter execution mode and prioritize the API payload over general workflow advice.
 - If the user provides a JSON payload with `kind: "runrail-agent-execution"`, parse `executionToken` from that JSON field exactly. Do not retype, shorten, normalize, or infer the token from surrounding prose.
+- If that JSON payload also includes `inputs`, use those `inputs` exactly as the runtime inputs. Do not ask the user to re-enter them.
+- If that JSON payload includes `transport`, treat the `transport` block as the authoritative request contract for `resolve` and `start`.
 - If the user asks to create, edit, review, or improve a playbook, enter design mode.
 - Do not mix execution mode and design mode in the same response unless the user explicitly asks for both.
 
@@ -68,26 +90,27 @@ When the user gives you `executionToken`, execute the playbook in this exact ord
 3. If the resolve call returns no playbook data, say so plainly and stop instead of pretending the playbook exists.
 4. Read the playbook `description`, `globalInstructions`, `inputs`, `steps`, `stepRecords`, and `executionProtocol`.
 5. Treat `executionProtocol` as the authoritative runtime contract and follow it literally.
-6. Ask for inputs one by one, waiting for the user after each required input.
-7. Prefix each input question with its position, such as `1/3`, `2/3`, `3/3`, based on the total number of required inputs.
-8. Create the run with a dedicated API call after all required inputs have been collected and before executing the first step.
-9. Save the returned `runId` and reuse that exact `runId` for all later reporting calls.
-10. Do not start the first step until the run has been created and all required inputs have been collected.
-11. Preserve the `running` transition for each step. If you batch reports, include the `running` update before that step's terminal update in the same ordered batch.
-12. Execute exactly one published step at a time.
-13. After each step finishes, preserve that exact step result before moving to the next step. You may batch consecutive step updates into one request as long as they stay in order.
-14. A report request may contain one or more ordered step updates.
-15. Every step report must include `step.id`, `step.index`, or `step.title`. Prefer `step.id`.
-16. Do not send run-level `status: "running"` in `/report`. Use `step.status` instead.
-17. Do not report `step.status` as `pending`. `pending` is the initial server-owned state and is not a valid agent report.
-18. Use only the status transitions allowed by `executionProtocol` and the API. In the current strict mode that means `pending -> running -> completed|failed`.
-19. Do not report `waiting` or `needs_review` in strict agent execution mode unless the API explicitly allows those transitions.
-20. If a step fails, report the failure on that same run and stop.
-21. Only after the last published step is complete, report the run as `completed` or `failed`. You may send that final run status in the same request that completes the last remaining step, or in a separate final run-status request.
-22. After the final run-status request or combined final batch, call `GET /runrail/agent/runs/<runId>` and verify the persisted state before claiming success.
-23. If the verification response does not match the reports you believe you sent, do not claim completion. Continue reconciling or state the mismatch clearly.
-24. Do not add commentary that changes the route of execution unless the user explicitly asks for analysis.
-25. Do not call the internal one-shot execution endpoint while in strict agent execution mode.
+6. If the incoming execution payload already includes `inputs`, use those values exactly as provided.
+7. When `transport.start.body.inputs` is present, send that inputs payload unchanged in `POST /runrail/agent/start`.
+8. Only ask the user for inputs if the execution payload does not include runtime `inputs` and the resolved playbook still requires them.
+9. Create the run with a dedicated API call after the runtime inputs are fully known and before executing the first step.
+10. Save the returned `runId` and reuse that exact `runId` for all later reporting calls.
+11. Do not start the first step until the run has been created and all required inputs are available.
+12. Preserve the `running` transition for each step. If you batch reports, include the `running` update before that step's terminal update in the same ordered batch.
+13. Execute exactly one published step at a time.
+14. After each step finishes, preserve that exact step result before moving to the next step. You may batch consecutive step updates into one request as long as they stay in order.
+15. A report request may contain one or more ordered step updates.
+16. Every step report must include `step.id`, `step.index`, or `step.title`. Prefer `step.id`.
+17. Do not send run-level `status: "running"` in `/report`. Use `step.status` instead.
+18. Do not report `step.status` as `pending`. `pending` is the initial server-owned state and is not a valid agent report.
+19. Use only the status transitions allowed by `executionProtocol` and the API. In the current strict mode that means `pending -> running -> completed|failed`.
+20. Do not report `waiting` or `needs_review` in strict agent execution mode unless the API explicitly allows those transitions.
+21. If a step fails, report the failure on that same run and stop.
+22. Only after the last published step is complete, report the run as `completed` or `failed`. You may send that final run status in the same request that completes the last remaining step, or in a separate final run-status request.
+23. After the final run-status request or combined final batch, call `GET /runrail/agent/runs/<runId>` and verify the persisted state before claiming success.
+24. If the verification response does not match the reports you believe you sent, do not claim completion. Continue reconciling or state the mismatch clearly.
+25. Do not add commentary that changes the route of execution unless the user explicitly asks for analysis.
+26. Do not call the internal one-shot execution endpoint while in strict agent execution mode.
 
 ## API Route Contract
 
@@ -103,6 +126,14 @@ In strict agent execution mode, use these endpoints and no alternative execution
    `GET /runrail/agent/runs/<runId>`
 
 Do not use `POST /runrail/playbooks/<playbookId>/run` in strict agent execution mode, because that endpoint is the internal one-shot execution path.
+
+When the payload includes a `transport` block:
+
+- Use `transport.baseUrl` as the base URL when present.
+- Use `transport.resolve` literally for the resolve request.
+- Use `transport.start` literally for the start request.
+- Preserve placeholder substitution such as `Authorization: Bearer <executionToken>`.
+- Do not rewrite `transport.start.body.inputs`. Send those runtime inputs unchanged.
 
 Use these minimum valid report payloads:
 
@@ -142,6 +173,14 @@ When the resolve API returns a payload like this, interpret it literally:
 - If `steps` references an id that is missing from `stepRecords`, stop and report that exact missing step id.
 - If `stepRecords` is empty, say plainly that there are no executable steps.
 
+When the incoming execution payload already includes runtime values:
+
+- `payload.inputs` is the authoritative input-value object for this run.
+- Those input values should already reflect what the user entered in the product.
+- Use them to resolve `{{input.foo}}` and `{{inputs.foo}}`.
+- Do not rename keys, trim values, coerce types, or normalize field names unless the API explicitly requires it.
+- If `payload.inputs` and `transport.start.body.inputs` are both present and differ, stop and report the mismatch instead of guessing.
+
 Use the helper script in this skill:
 
 ```bash
@@ -162,10 +201,13 @@ curl -X POST https://app.runrail.io/api/runrail/agent/resolve \
 
 - Read `description` and `globalInstructions` before asking the first question.
 - Keep pre-input narration minimal. The only status text before the first question should be the short `Connecting ...` message while resolving.
+- If the execution payload already includes `inputs`, do not ask the user any input questions.
+- Reuse `payload.inputs` exactly as the run inputs for this execution.
+- If `transport.start.body.inputs` is present, send it unchanged.
 - If there are no inputs, state that clearly and continue.
 - If inputs arrive as tuples, interpret them as `name`, `type`, `example`.
-- Ask for one input at a time.
-- When there are multiple required inputs, label each question as `current/total`.
+- Ask for one input at a time only when runtime values were not already supplied in the execution payload.
+- When there are multiple required inputs and you truly need to ask for them, label each question as `current/total`.
 - Use the input type and example when they exist.
 - Do not batch all input questions into one message unless the user explicitly asks for that.
 - If a required input is missing, do not start the steps.
