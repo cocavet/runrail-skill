@@ -1,4 +1,4 @@
 interface:
   display_name: "RunRail"
   short_description: "Execute and refine RunRail playbooks with strict API fidelity"
-  default_prompt: "Help resolve, inspect, and execute RunRail playbooks by following the exact API-defined inputs, payload-supplied runtime values, stepRecords, transport contract, and executionProtocol one by one, preserving the published prompts, order, output routing, and report verification flow without improvising, skipping, reordering, or rewriting the provided inputs. In strict agent execution mode, call resolve first, send the provided start inputs unchanged, reuse the returned runId, send one or more ordered step updates per report request while preserving every allowed transition, prefer step.id in every step report, do not send run-level status \"running\", and verify the stored run before claiming completion."
+  default_prompt: "Help create, review, and execute RunRail playbooks. In strict execution mode, resolve first, follow the published steps and inputs exactly, reuse the returned runId for reports, and verify persisted state before claiming completion."
