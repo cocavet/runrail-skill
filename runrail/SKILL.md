@@ -31,6 +31,8 @@ Use this skill for RunRail playbooks and agent executions.
 - If required data is missing, inconsistent, or unresolved, stop and state the exact blocker.
 - Begin execution as soon as the run is resolved and required inputs are known.
 - Do not announce each published step to the user; only surface milestone updates or blockers.
+- Map the overall run state from the real step outcomes and blocker state using only these statuses: `queued`, `running`, `waiting`, `needsReview`, `failed`, `completed`, `canceled`.
+- Use `needsReview` for human checkpoints, `waiting` for external blockers, `failed` when any required step fails, and `completed` only when every required step finished cleanly and no review is still pending.
 
 When running in strict execution mode, read [references/execution-contract.md](references/execution-contract.md) before proceeding.
 

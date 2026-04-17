@@ -45,6 +45,8 @@ The exported skill now makes the strict `/report` contract explicit for agents:
 - Preserve every allowed transition in order when batching, including `running` before `completed` or `failed`.
 - Prefer reporting the exact rendered step input back to `/report` with `resolvedPrompt`, and optionally `inputPreview` or `input`, so the execution timeline shows the real input context.
 - You may send the final run status in the same request that completes the last step, or in a separate final request after that.
+- The skill now documents the full run status vocabulary and how to derive it from step outcomes: `queued`, `running`, `waiting`, `needsReview`, `failed`, `completed`, `canceled`.
+- `needsReview` is for human approval or inspection checkpoints, `waiting` is for external blockers, `failed` is for terminal step failures, and `completed` is only for runs whose required steps all finished cleanly.
 
 ## Repo Layout
 

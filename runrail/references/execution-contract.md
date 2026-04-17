@@ -60,6 +60,37 @@ If `transport` is present:
 - You may batch ordered step updates in one report request if the sequence remains correct.
 - Do not claim a report succeeded unless the API call succeeded.
 
+## Run Status Mapping
+
+Use these run statuses when deriving the overall run state from the latest step outcomes and blocker state:
+
+- `queued`: the run exists, but no published step has entered `running` yet.
+- `running`: at least one published step is currently `running`, and the run is not blocked, failed, canceled, or awaiting review.
+- `waiting`: execution is paused waiting on an external dependency, async callback, user input, or some other blocker before the next step can continue.
+- `needsReview`: the executed work is ready for a human decision, approval, or review before the run can continue or be accepted as done.
+- `failed`: any required step has reported `failed`, or the run cannot continue because execution hit a terminal error.
+- `completed`: every required published step finished with `completed`, and the run no longer needs review or waiting.
+- `canceled`: the run was intentionally stopped before completion by the user or system.
+
+Apply status precedence in this order when multiple conditions could appear true:
+
+1. `canceled`
+2. `failed`
+3. `needsReview`
+4. `waiting`
+5. `running`
+6. `completed`
+7. `queued`
+
+Operational rules:
+
+- Infer the run status from the real step outcomes and the current blocker state; do not invent an incompatible status.
+- A run with any required step still `running` is not `completed`.
+- A run with a failed step is not `waiting`, `needsReview`, or `completed`.
+- Use `needsReview` instead of `completed` when the executed steps are done but a human must still inspect, approve, or choose the next action.
+- Use `waiting` instead of `running` when no step can actively progress until an external event happens.
+- `queued` and `running` are usually observed states from `GET /runrail/agent/runs/<runId>`. Unless the API explicitly requires otherwise, let the backend derive them rather than forcing them in `/report`.
+
 Minimum valid report bodies:
 
 ```json
