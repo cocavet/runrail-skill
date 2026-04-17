@@ -15,6 +15,7 @@ Read this file only when the user supplies an `executionToken` or a payload with
 
 - Parse `executionToken` exactly as provided.
 - If payload `inputs` exist, use them exactly and do not ask again.
+- Treat empty runtime input values as optional `null`. If an input is an empty string, blank string, or otherwise unset, do not treat it as missing required data unless the published playbook explicitly says it must be non-empty.
 - If `payload.inputs` and `transport.start.body.inputs` both exist and differ, stop and report the mismatch.
 - Do not switch into redesign or optimization unless the user explicitly asks.
 
@@ -90,6 +91,9 @@ Recommended observability fields when available:
 - Use `{{output.foo}}` and `{{outputs.foo}}` from prior step outputs.
 - Ignore harmless whitespace inside placeholders.
 - Preserve published input names exactly, including spaces.
+- Treat empty or blank runtime input values as null-equivalent optional inputs and ignore them during validation.
+- Do not ask the user to fill an empty optional input again.
+- If a placeholder resolves only to an empty optional input, treat that value as absent rather than inventing fallback content.
 - If a referenced variable cannot be resolved, stop and name it exactly.
 
 ## Step Execution

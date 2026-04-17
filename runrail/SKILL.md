@@ -27,6 +27,7 @@ Use this skill for RunRail playbooks and agent executions.
 - Treat the resolved API payload as the source of truth.
 - Follow the published route, prompts, inputs, step order, and output exposure exactly.
 - Do not invent steps, merge steps, skip steps, reorder execution, rewrite runtime inputs, or change the route.
+- Treat empty runtime input values as optional null-equivalents. If an input arrives empty, blank, or effectively unset, ignore it instead of treating it as a blocker or asking for it again.
 - If required data is missing, inconsistent, or unresolved, stop and state the exact blocker.
 - Begin execution as soon as the run is resolved and required inputs are known.
 - Do not announce each published step to the user; only surface milestone updates or blockers.
@@ -44,6 +45,7 @@ python3 scripts/resolve_playbook.py --execution-token "<executionToken>"
 - Define the workflow goal first.
 - Prefer short steps with one responsibility each.
 - Make inputs, variables, and outputs explicit.
+- Mark optional inputs clearly and document that empty values should be treated as `null` and ignored.
 - Use structured outputs when later steps depend on them.
 - Preserve business intent while improving reliability.
 - Do the design work directly instead of narrating intermediate reasoning unless the user explicitly asks for it.
